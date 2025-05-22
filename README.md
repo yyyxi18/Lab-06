@@ -218,7 +218,8 @@ LIMIT 10;
 
 ## 4. 三值邏輯與重複/例外資料查核
 #### 題目 4-1
-查出 entry_time 為 NULL 的報名紀錄，並顯示會員與課程名稱
+查出 entry_time 為 NULL 的報名紀錄，並顯示會員與課程名稱 
+
 **IS NULL + JOIN**
 ```
 SELECT r.registration_id, m.name AS member_name, c.name AS course_name, r.entry_time
@@ -235,7 +236,8 @@ WHERE r.entry_time IS NULL;
 
 #### 題目 4-2
 檢查同一會員在同一時段報名多次的情況
-**GROUP BY ... HAVING**
+
+**GROUP BY ... HAVING** 
 - 這會列出有重複報名的(member_id, course_schedule_id)組合（cnt > 1）
 ```
 SELECT member_id, course_schedule_id, COUNT(*) AS cnt
@@ -257,6 +259,8 @@ JOIN Registrations r2
  AND r1.registration_id <> r2.registration_id;
  ```
  ![alt text](4.2.2.png)
+
+
 - 若資料結構允許重複，找出 member_id, name, course_schedule_id 與「報名次數 (cnt) > 1」的紀錄。
 - 若沒有任何重複，請顯示「無重複資料」。
 
