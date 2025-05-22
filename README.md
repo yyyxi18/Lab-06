@@ -268,12 +268,67 @@ JOIN Registrations r2
 #### 題目 5-1
 列出每位教練「本月」課程所有時段的平均出席人數
 
+**LEFT JOIN + GROUP BY**
+- 先用 LEFT JOIN 統計每個 course_schedule_id 的實際到課人數（entry_time 不為 NULL），再求該教練/課在本月時段的平均到課。
+- 月份篩選 (MONTH(cs.start_time) = MONTH(CURRENT_DATE()) ...) 寫法沒問題，建議 GROUP BY 時補齊 sa.name, c.name 更嚴謹。
+```
+SELECT 
+  sa.staff_id, sa.name AS coach_name, 
+  c.course_id, c.name AS course_name, 
+  AVG(att.count_per_schedule) AS avg_attended_this_month
+FROM StaffAccounts sa
+JOIN Courses c ON sa.staff_id = c.coach_id
+JOIN CourseSchedules cs ON c.course_id = cs.course_id
+LEFT JOIN (
+  SELECT r.course_schedule_id, COUNT(r.registration_id) AS count_per_schedule
+  FROM Registrations r
+  WHERE r.entry_time IS NOT NULL
+  GROUP BY r.course_schedule_id
+) att ON cs.course_schedule_id = att.course_schedule_id
+WHERE sa.role = 'COACH'
+  AND cs.start_time >= DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')
+  AND cs.start_time < DATE_ADD(DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01'), INTERVAL 1 MONTH)
+GROUP BY sa.staff_id, sa.name, c.course_id, c.name;
+```
+![alt text](5.1.png)
+
 - 請 JOIN StaffAccounts、Courses、CourseSchedules、Registrations，並利用 GROUP BY 教練、課程。
 - 使用 EXPLAIN 分析你的寫法，以觀察在大資料量下的索引使用情況或可能的全表掃描。
 - 思考：可在哪些欄位加索引來優化這個多表 JOIN 與群組運算？
 
 #### 題目 5-2
 列出一年內「從未缺席任何一場已報名時段」的學員名單（全勤會員）
+
+**NOT IN**
+- 排除一年內曾有缺席（entry_time IS NULL）者
+- 若子查詢有 NULL，結果易出錯，也較難利用索引
+```
+SELECT m.member_id, m.name
+FROM Members m
+WHERE m.member_id NOT IN (
+    SELECT r.member_id
+    FROM Registrations r
+    WHERE r.register_time >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+    GROUP BY r.member_id
+    HAVING SUM(r.entry_time IS NULL) > 0
+);
+```
+
+**NOT EXITS**
+- 只要該會員找不到一年內有缺席的紀錄，才被列入
+- 通常 NOT EXISTS 效能更佳、邏輯更穩健，是實務上首選
+```
+SELECT m.member_id, m.name
+FROM Members m
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM Registrations r
+    WHERE r.member_id = m.member_id
+      AND r.register_time >= DATE_SUB(NOW(), INTERVAL 1 YEAR)
+    GROUP BY r.member_id
+    HAVING SUM(r.entry_time IS NULL) > 0
+);
+```
 
 - 條件：每一筆 Registrations 都有 entry_time（不為 NULL）。
 - 若只使用 NOT EXISTS 或 NOT IN 實作，何者效能較佳？是否有更好的方法？
