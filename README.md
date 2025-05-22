@@ -186,11 +186,11 @@ GROUP BY sa.staff_id, c.course_id;
 找出三個月內報到次數最多的 10 名會員（member_id, name, 出席次數）
 **JOIN + GROUP BY**
 - 耗時5秒，屬於慢查詢範圍，代表目前效能還有優化空間
-- 可以加索引的主要欄位，提升此查詢效能：
-    (1) Registrations.member_id
-    (2) Registrations.entry_time
-    (3) 複合索引：在 Registrations 表 上建立複合索引：(entry_time, member_id)
-    (4) Members.member_id
+- 可以加索引的主要欄位，提升此查詢效能： <br>
+    (1) Registrations.member_id <br>
+    (2) Registrations.entry_time <br>
+    (3) 複合索引：在 Registrations 表 上建立複合索引：(entry_time, member_id) <br>
+    (4) Members.member_id <br>
 
 ```
 SELECT 
