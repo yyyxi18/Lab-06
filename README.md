@@ -2,10 +2,10 @@
 0522資料庫設計
 
 ## 1. 查詢與效能運算練習
-####　題目 1-1
+#### 題目 1-1
 列出「過去 6 個月未曾進場過的會員」的 member_id 與 name。
 
-** NOT IN **
+**NOT IN**
 - 耗時2.8秒
 - 適合小規模資料量
 ```
@@ -20,7 +20,7 @@ WHERE M.role = 'STUDENT'
   );
 ```
 
-** NOT EXISTS **
+**NOT EXISTS**
 - 語意明確，效能良好，利於日後維護與理解
 - NOT EXISTS 子查詢能確保「沒有任何一筆進場記錄符合條件」時，才會列出該名學生
 - 效率明顯優於 JOIN 寫法，特別適合大筆數資料查詢
@@ -38,7 +38,7 @@ WHERE M.role = 'STUDENT'
   );
   ```
 
-** LEFT JOIN ... IS NULL法 **
+**LEFT JOIN ... IS NULL法**
 - 語意偏差：題目要求是最近6個月沒進場的會員，使用 LEFT JOIN 的可能會將從未進場或6個月前有進場過的會員一起列出
 - 執行效率低落：使用 LEFT JOIN+日期條件在 JOIN 上，對於大量資料會產生全表掃描與多餘資料行，導致效能低（本例實測需 5 秒左右）
 ```
@@ -54,7 +54,7 @@ WHERE M.role = 'STUDENT' AND R.entry_time IS NULL;
 
 #### 題目 1-2
 列出同時報名過兩個指定時段（假設 course_schedule_id = 'A'、B'）的會員
-** GROUP BY + HAVING **
+**GROUP BY + HAVING**
 - 耗時2.2秒
 - 語意直覺，效能及資料庫可讀性通常都較優
 ```
@@ -65,7 +65,7 @@ GROUP BY member_id
 HAVING COUNT(DISTINCT course_schedule_id) = 2;
 ```
 
-** 自 JOIN **
+**自 JOIN**
 - 耗時2.6秒
 - 與 GROUP BY + HAVING 邏輯一致，但效率較慢
 ```
@@ -84,7 +84,7 @@ WHERE R1.course_schedule_id = 'A'
 #### 題目 2-1
 找出「本月內沒有任何進場記錄」的會員
 
-** NOT EXISTS **
+**NOT EXISTS**
 ```
 SELECT m.*
 FROM Members m
@@ -98,7 +98,7 @@ WHERE NOT EXISTS (
 );
 ```
 
-** NOT IN **
+**NOT IN**
 ```
 SELECT m.*
 FROM Members m
@@ -111,7 +111,7 @@ WHERE m.member_id NOT IN (
 );
 ```
 
-** LEFT JOIN ... IS NULL **
+**LEFT JOIN ... IS NULL**
 ```
 SELECT m.*
 FROM Members m
