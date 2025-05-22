@@ -130,6 +130,22 @@ WHERE r.registration_id IS NULL;
 #### 題目 2-2
 列出「至少曾參加自己擔任教練課程」的教練清單
 
+**EXITS**
+```
+SELECT DISTINCT s.staff_id, s.name
+FROM StaffAccounts s
+WHERE s.role = 'COACH'
+  AND EXISTS (
+    SELECT 1
+    FROM Courses c
+    JOIN CourseSchedules cs ON c.course_id = cs.course_id
+    JOIN Registrations r ON cs.course_schedule_id = r.course_schedule_id
+    WHERE c.coach_id = s.staff_id
+      AND r.member_id = s.staff_id
+  );
+  ```
+![alt text](2.2.png)
+
 - 教練必須同時出現在 StaffAccounts，並在 Courses 內綁定為該課程 coach。
 - 他至少有一次以會員身份（在 Members）報名自己所帶的課程 (Registrations)。
 - 請使用 EXISTS 撰寫查詢，需特別留意同一人員在 Members、StaffAccounts 兩表都可能有紀錄。
@@ -138,12 +154,64 @@ WHERE r.registration_id IS NULL;
 #### 題目 3-1
 列出每位教練、其課程、課次總數，及平均每場報名人數
 
+- 盡量將「資料量最多的表先分組/聚合成較小結果後，再 JOIN 或 GROUP BY」，而非直接全部 JOIN 後分組
+- 通常建議與大表子查詢聚合的寫法搭配合適索引，能導致最快的分組速度。
+
+```
+SELECT
+    sa.staff_id,
+    sa.name AS coach_name,
+    c.course_id,
+    c.name AS course_name,
+    COUNT(cs.course_schedule_id) AS total_sessions,
+    AVG(COALESCE(session_reg.counts, 0)) AS avg_registrations_per_session   -- ◎
+FROM StaffAccounts sa
+JOIN Courses c ON sa.staff_id = c.coach_id
+JOIN CourseSchedules cs ON c.course_id = cs.course_id
+LEFT JOIN (
+    SELECT course_schedule_id, COUNT(*) AS counts
+    FROM Registrations
+    GROUP BY course_schedule_id
+) session_reg ON cs.course_schedule_id = session_reg.course_schedule_id
+WHERE sa.role = 'COACH'
+GROUP BY sa.staff_id, c.course_id;
+```
+![alt text](3.1.png)
+
 - 需 JOIN Courses、StaffAccounts、CourseSchedules、Registrations 四表。
 - 輸出欄位：教練姓名、課程名稱、課表數、總報名人次、平均報名人數。
 - 請思考：在 JOIN 及 GROUP BY 的排程與順序上，哪種組合能夠最佳化群組速度？若資料量龐大，可考慮在哪些欄位上建立（複合）索引？
 
 #### 題目 3-2
 找出三個月內報到次數最多的 10 名會員（member_id, name, 出席次數）
+**JOIN + GROUP BY**
+- 耗時5秒，屬於慢查詢範圍，代表目前效能還有優化空間
+- 可以加索引的主要欄位，提升此查詢效能：
+(1) Registrations.member_id
+(2) Registrations.entry_time
+(3) 複合索引：在 Registrations 表 上建立複合索引：(entry_time, member_id)
+(4) Members.member_id
+
+```
+SELECT 
+    m.member_id,
+    m.name,
+    COUNT(r.entry_time) AS attendance_count
+FROM 
+    Members m
+JOIN 
+    Registrations r ON m.member_id = r.member_id
+WHERE 
+    r.entry_time IS NOT NULL
+    AND r.entry_time >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+GROUP BY 
+    m.member_id, m.name
+ORDER BY 
+    attendance_count DESC
+LIMIT 10;
+```
+
+![alt text](3.2.png)
 
 - 請避免不必要的子查詢，儘量以 JOIN 搭配 GROUP BY 完成。
 - 思考有哪些欄位可加索引，以提升此查詢效能。
