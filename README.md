@@ -219,13 +219,44 @@ LIMIT 10;
 ## 4. 三值邏輯與重複/例外資料查核
 #### 題目 4-1
 查出 entry_time 為 NULL 的報名紀錄，並顯示會員與課程名稱
+**IS NULL + JOIN**
+```
+SELECT r.registration_id, m.name AS member_name, c.name AS course_name, r.entry_time
+FROM Registrations r
+JOIN Members m ON r.member_id = m.member_id
+JOIN CourseSchedules cs ON r.course_schedule_id = cs.course_schedule_id
+JOIN Courses c ON cs.course_id = c.course_id
+WHERE r.entry_time IS NULL;
+```
 
+![alt text](4.1.png)
 - 表示該會員雖然預約了，但尚未實際進場或資料遺漏。
 - 注意 IS NULL 的用法，並透過 JOIN 取出該會員及課程完整資訊。
 
 #### 題目 4-2
 檢查同一會員在同一時段報名多次的情況
+**GROUP BY ... HAVING**
+- 這會列出有重複報名的(member_id, course_schedule_id)組合（cnt > 1）
+```
+SELECT member_id, course_schedule_id, COUNT(*) AS cnt
+FROM Registrations
+GROUP BY member_id, course_schedule_id
+HAVING cnt > 1;
+```
+![alt text](4.2.1.png)
 
+
+**自我聯結（Self Join）**
+- 這會找出繼有同一個member_id、同一個course_schedule_id、但registration_id不同的記錄
+```
+SELECT r1.registration_id, r1.member_id, r1.course_schedule_id
+FROM Registrations r1
+JOIN Registrations r2
+  ON r1.member_id = r2.member_id
+ AND r1.course_schedule_id = r2.course_schedule_id
+ AND r1.registration_id <> r2.registration_id;
+ ```
+ ![alt text](4.2.2.png)
 - 若資料結構允許重複，找出 member_id, name, course_schedule_id 與「報名次數 (cnt) > 1」的紀錄。
 - 若沒有任何重複，請顯示「無重複資料」。
 
